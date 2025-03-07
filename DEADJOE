@@ -1,0 +1,33 @@
+
+*** These modified files were found in JOE when it aborted on Fri Mar  7 15:12:09 2025
+*** JOE was aborted because the terminal closed
+
+*** File '(Unnamed)'
+y
+Y
+wq
+q
+:wq
+wq
+q!
+N
+
+*** File '(Unnamed)'
+/home/sergiocontrerasarredondo/Documents/GNN/GNN_model/Committo-GNN/.git/COMMIT_EDITMSG
+
+*** File '/home/sergiocontrerasarredondo/Documents/GNN/GNN_model/Committo-GNN/.git/COMMIT_EDITMSG'
+Delete dcd file
+ 
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch master
+# Changes to be committed:
+#	deleted:    data/100ns300k_rmsd/rmsd2d_all.dcd
+#
+
+*** File '* Startup Log *'
+Processing '/etc/joe/editorrc'...
+Processing '/etc/joe/ftyperc'...
+Finished processing /etc/joe/ftyperc
+Finished processing /etc/joe/editorrc
