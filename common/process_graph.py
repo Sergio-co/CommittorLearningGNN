@@ -2,6 +2,7 @@
 import MDAnalysis as mda
 import numpy as np
 import torch.nn as nn
+import random
 import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
@@ -9,11 +10,12 @@ from torch.utils.data import Dataset
 from torch.utils.data import random_split
 from scipy.spatial import distance_matrix
 from torch_geometric.utils import to_undirected
+from tqdm import tqdm
 
 def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt'):
     u = mda.Universe(top, trajectory)
     graphs = []
-    for ts in u.trajectory:
+    for ts in tqdm(u.trajectory, desc="Processing trajectory"):
         graph = Get_Graph(u.atoms, cutoff)
         graphs.append(graph)
     if save:    
@@ -23,8 +25,9 @@ def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt'
 
 
 def Get_Graph(frame, cutoff):
-    #selected_atoms = [1, 2, 3, 5, 9, 13, 14, 15, 17, 19]
-    selected_atoms = [0, 1, 2, 4, 8, 12, 13, 14, 16, 18]
+    #selected_atoms = frame.select_atoms("not name H*").indices
+    selected_atoms = frame.select_atoms("all").indices
+
     coords = frame.positions[selected_atoms]
     com = np.mean(coords, axis=0)
 
@@ -44,9 +47,9 @@ def Get_Graph(frame, cutoff):
 
     for local_i, i in enumerate(selected_atoms):
         for local_j, j in enumerate(selected_atoms):
-            if local_i < local_j and dist_matrix[local_i, local_j] <= cutoff: #and (i, j) in bonded_pairs:
+            if local_i < local_j and dist_matrix[local_i, local_j] <= cutoff and (i, j) in bonded_pairs:
                 edge_index.append([local_i, local_j])
-                edge_index.append([local_j, local_i])  # Grafo no dirigido
+                edge_index.append([local_j, local_i])
                 
                 distance = dist_matrix[local_i, local_j]
                 edge_attr.append([distance])
@@ -105,46 +108,75 @@ def Get_Graph(frame, cutoff):
 
     return graph
 
-def create_timelagged_dataset(dataset, dataset1, lag_time=2):
+def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
     lag = int(lag_time)
 
-    #**** This is to skip the first 25ns in the simulation ****#
-    dataset = dataset[500000:-1]
-    dataset1 = dataset1[500000:]
+    # balance --> points outside basins / total points
+    dataset = dataset[::10]
+    dataset1 = dataset1[::10]
 
     label0 = dataset1[:-lag]
     label1 = dataset1[lag:]
-    labels = [a + b for a, b in zip(label0, label1)]
+    weights = torch.sqrt(torch.tensor([row0[3] * row1[3] for row0, row1 in zip(label0, label1)]))
+    labels = [a + b + [c] for a, b, c in zip(label0, label1, weights)]
 
     data0 = dataset[:-lag]
     data1 = dataset[lag:]
-    tupla = [(data0[i], data1[i], labels[i]) for i in range(len(data0))]
+    tupla = list(zip(data0, data1, labels))
     
-    #** This is to save a shorter traj **#
-    torch.save(tupla[:500000], 'Full_biased25ns.pt')
-    torch.save(tupla[:100000], 'Full_biased5ns.pt')
-    torch.save(tupla, 'Full_biased100ns.pt')
+    if balance:
+        positive_samples = [t for t in tupla if t[2][2] == 0 or t[2][2] == 1]  # center = 0 o 1
+        negative_samples = [t for t in tupla if t[2][2] == -1]  # center = -1
+
+        print('********************************')
+        print(f'Inside basin: {len(positive_samples)}')
+        print(f'Outside basin: {len(negative_samples)}')
+        print('********************************')
+
+
+        target_negative_count = int(len(positive_samples) * balance / (1.0 - balance))
+        if len(negative_samples) > target_negative_count:
+            negative_samples = random.sample(negative_samples, target_negative_count)
+
+        balanced_dataset = positive_samples + negative_samples
+        random.shuffle(balanced_dataset)
+        tupla = balanced_dataset
+    
+    torch.save(tupla[:100000], './full_balanced/Full_combo5ns_heavy.pt')
+    #torch.save(tupla[:1000000], './data/bond_cutoff20/Fullb_biased50ns300k.pt')
     
     return tupla
     
+def renormalize_weights(weights):
+    return weights / weights.sum() * weights.shape[0]
+
+def apply_renormalization(dataset):
+    device = next(iter(dataset))[0].edge_index.device
+    weights = torch.tensor([tup[2][-1] for tup in dataset], dtype=torch.float32, device=device)
+    new_weights = renormalize_weights(weights)
+    new_dataset = [(tup[0], tup[1], tup[2][:-1] + [new_w]) for tup, new_w in zip(dataset, new_weights)] 
+    return ListToDataset(new_dataset)
+
 def train_val_dataset(dataset, train_ratio=0.8):
     num_graphs = len(dataset)
     num_train = int(num_graphs * train_ratio)
     num_val = num_graphs - num_train
     datasets = ListToDataset(dataset)
     train_dataset, val_dataset = random_split(datasets, [num_train, num_val])
+   
+    train_dataset = apply_renormalization(train_dataset)
+    val_dataset = apply_renormalization(val_dataset)
 
     return train_dataset, val_dataset
 
 class ListToDataset(Dataset):
     def __init__(self, data):
         self.data = data
-
+    
     def __len__(self):
         return len(self.data)
-
+    
     def __getitem__(self, index):
         return self.data[index]
 
     
- 

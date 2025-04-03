@@ -72,7 +72,7 @@ class GVPModel(torch.nn.Module):
                 vector_gate=True,
             )
 
-        self.pool = global_mean_pool
+        self.pool = global_add_pool
 
     def forward_gnn(self, node_s, node_v, edge_index, edge_s, edge_v, batch):
         if node_v.dim() == 2:
@@ -95,6 +95,7 @@ class GVPModel(torch.nn.Module):
             batch = torch.zeros(node_s.shape[0], dtype=torch.long, device=node_s.device)
         
         output = self.pool(output, batch)
+        #output = torch.sigmoid(output)
         return output.squeeze()
 
     def forward(self, node_s, node_v, edge_index, edge_s, edge_v, batch):

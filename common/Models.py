@@ -59,7 +59,7 @@ class VCN(nn.Module):
         self,
         inputs: int = 6,
         outputs: int = 1,
-        hidden_dim: int = 16,
+        hidden_dim: int = 32,
         n_layers: int = 6,
         drop_rate: float = 0.1,
         activation: str = 'ELU',
@@ -86,7 +86,7 @@ class VCN(nn.Module):
             layers.append(self.activation)
         
         layers.append(nn.Linear(hidden_dim, outputs))
-        #layers.append(self.sigmoid)  
+        layers.append(self.sigmoid)
         self.model = nn.Sequential(*layers)
 
     def forward(self, x):
@@ -125,22 +125,17 @@ class GNNModel(GVPModel):
             activation=activation
         )
 
-        self.ffn = VCN(inputs=gnn_out, outputs=n_cvs)
+        #self.ffn = VCN(inputs=gnn_out, outputs=n_cvs)
 
     def forward(self, node_s, node_v, edge_index, edge_s, edge_v, batch):
         y = self.forward_gnn(node_s, node_v, edge_index, edge_s, edge_v, batch)
-        y = self.ffn(y)
+        #y = self.ffn(y)
         return y
 
     @torch.jit.export
     def q(self, node_s, node_v, edge_index, edge_s, edge_v, batch):
         y = self.forward_gnn(node_s, node_v, edge_index, edge_s, edge_v, batch)
-        y = self.ffn.q_layer(y)
+        #y = self.ffn.q_layer(y)
         return y
-
-
-
-
-
 
 

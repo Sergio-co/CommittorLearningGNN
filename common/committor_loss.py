@@ -12,20 +12,30 @@ def JAB(q_0, q_t, weights):
     L = torch.sum(weights * torch.square(q_0 - q_t))
     return L / torch.sum(weights)
 
+def JAB1(q_0, q_t, w0, wt):
+    L = torch.mean(torch.square(torch.sqrt(w0)*q_0 - torch.sqrt(wt)*q_t))
+    return L
+
 def loss(model, data_0, data_t, labels, kforce=1.0):
-    k_a0, k_b0, center_0, weight_0, k_at, k_bt, center_t, weight_t = labels
-    weights = torch.sqrt(weight_0 * weight_t)
+    k_a0, k_b0, center_0, weight_0, k_at, k_bt, center_t, weight_t, weights = labels
 
     q_0 = model(data_0.node_s, data_0.node_v, data_0.edge_index, data_0.edge_attr, data_0.edge_v, data_0.batch)
     q_t = model(data_t.node_s, data_t.node_v, data_t.edge_index, data_t.edge_attr, data_t.edge_v, data_t.batch)
 
+    #weights = torch.clamp(weights, min=1e-6)
+    #weights = torch.ones_like(q_0, device=q_0.device)
+
     loss = JAB(q_0, q_t, weights)
+    #loss = JAB(q_0, q_t, weight_0, weight_t)
     # add harmonic restraint for basin A
     res_A = kforce*k_a0 * torch.square(q_0 - center_0) + kforce*k_at * torch.square(q_t - center_t)
     # add harmonic restraint for basin B
     res_B = kforce*k_b0 * torch.square(q_0 - center_0) + kforce*k_bt * torch.square(q_t - center_t)
     # weight the restraints
     res = torch.sum(weights * (res_A + res_B)) / torch.sum(weights)
-    
-    return loss+res, torch.min(q_0), torch.max(q_0)
+    spread = torch.var(q_0)
+
+    total_loss = loss + res #+ spread
+
+    return total_loss, q_0[0], loss, res, spread
 
