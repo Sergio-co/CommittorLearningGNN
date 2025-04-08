@@ -112,8 +112,8 @@ def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
     lag = int(lag_time)
 
     # balance --> points outside basins / total points
-    dataset = dataset[::10]
-    dataset1 = dataset1[::10]
+    #dataset = dataset[::10]
+    #dataset1 = dataset1[::10]
 
     label0 = dataset1[:-lag]
     label1 = dataset1[lag:]

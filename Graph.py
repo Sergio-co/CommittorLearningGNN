@@ -90,7 +90,8 @@ loader = DataLoader(dataset, batch_size=20000, shuffle=False)
 outputs = []
 with torch.no_grad():
     for batch in loader:
-        output = scripted_model(batch.node_s, batch.node_v, batch.edge_index, batch.edge_attr, batch.edge_v, batch.batch)
+    	output = scripted_model(batch)
+        #output = scripted_model(batch.node_s, batch.node_v, batch.edge_index, batch.edge_attr, batch.edge_v, batch.batch)
         #output = torch.clamp(output, min=0.0, max=1.0)
         outputs.append(output.cpu())
 

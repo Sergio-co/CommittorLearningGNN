@@ -19,8 +19,8 @@ def JAB1(q_0, q_t, w0, wt):
 def loss(model, data_0, data_t, labels, kforce=1.0):
     k_a0, k_b0, center_0, weight_0, k_at, k_bt, center_t, weight_t, weights = labels
 
-    q_0 = model(data_0.node_s, data_0.node_v, data_0.edge_index, data_0.edge_attr, data_0.edge_v, data_0.batch)
-    q_t = model(data_t.node_s, data_t.node_v, data_t.edge_index, data_t.edge_attr, data_t.edge_v, data_t.batch)
+    q_0 = model(data_0)
+    q_t = model(data_t)
 
     #weights = torch.clamp(weights, min=1e-6)
     #weights = torch.ones_like(q_0, device=q_0.device)

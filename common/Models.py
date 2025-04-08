@@ -127,14 +127,14 @@ class GNNModel(GVPModel):
 
         #self.ffn = VCN(inputs=gnn_out, outputs=n_cvs)
 
-    def forward(self, node_s, node_v, edge_index, edge_s, edge_v, batch):
-        y = self.forward_gnn(node_s, node_v, edge_index, edge_s, edge_v, batch)
+    def forward(self, data):
+        y = self.forward_gnn(data)
         #y = self.ffn(y)
         return y
 
-    @torch.jit.export
-    def q(self, node_s, node_v, edge_index, edge_s, edge_v, batch):
-        y = self.forward_gnn(node_s, node_v, edge_index, edge_s, edge_v, batch)
+    #@torch.jit.export
+    def q(self, data):
+        y = self.forward_gnn(data)
         #y = self.ffn.q_layer(y)
         return y
 
