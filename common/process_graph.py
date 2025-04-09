@@ -117,7 +117,7 @@ def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
 
     label0 = dataset1[:-lag]
     label1 = dataset1[lag:]
-    weights = torch.sqrt(torch.tensor([row0[3] * row1[3] for row0, row1 in zip(label0, label1)]))
+    weights = torch.sqrt(torch.tensor([row0[3] * row1[3] for row0, row1 in zip(label0, label1)], device=label0[0][0].device))
     labels = [a + b + [c] for a, b, c in zip(label0, label1, weights)]
 
     data0 = dataset[:-lag]
