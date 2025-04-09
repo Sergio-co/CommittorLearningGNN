@@ -38,7 +38,6 @@ args = parser.parse_args()
 device = torch.device(args.gpu)
 torch.cuda.empty_cache()
 gnn = GNNModel(
-    n_cvs = 1,
     gnn_out = 1,
     node_s_dim = 16,
     node_v_dim = 8,
@@ -64,7 +63,7 @@ label_data = pd.read_csv('./data/March.11.GNN.data.Trialanine/tri-rmsd-2d.csv')
 labels = [[torch.tensor(value, device=device) for value in sublist] for sublist in label_data[['Ka', 'Kb', 'center', 'weight']].to_numpy().tolist()]
 datasets = create_timelagged_dataset(dataset, labels, lag_time=2, balance=0.7)
 
-##*** This to read the full graph dataset if you have it ready ***###
+##*** This is to read the Full_* dataset if you have it ready ***###
 #datasets = torch.load('./data/all/Full_lcombo_all.pt', map_location=device)
 #datasets = [
 #    (g1.to(device), g2.to(device), [t.to(device) for t in tensor_list]) 
