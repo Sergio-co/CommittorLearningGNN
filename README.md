@@ -15,6 +15,6 @@ Where:
 - gpu: string parameter. If there is cuda, write "cuda:N" with N a number; if not "cpu".
 - dcd: dcd file for the trajectory.
 - top: topology file for the molecule.
-- csv: csv file in which the time-lagged trajectory is written.
+- csv: csv file in which the time-lagged trajectory is written and the weigths for reweigthing the committor time-correlation function.
 - graph: string referring to the name you give to the file containing all the graphs corresponding to the trajectory images.
 - model: string referring to the name you give to the qGNN model.
