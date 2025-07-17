@@ -32,6 +32,11 @@ parser.add_argument("epochs", type=int, help="Number of epochs")
 parser.add_argument("patience", type=int, help="Patience")
 parser.add_argument("k_force", type=float, help="Basin force constant")
 parser.add_argument("gpu", type=str, help="gpu")
+parser.add_argument("dcd", type=str, help="DCD file name")
+parser.add_argument("top", type=str, help="Topology file name")
+parser.add_argument("csv", type=str, help="Trajectory csv file name")
+parser.add_argument("graph", type=str, help="Graph dataset name")
+parser.add_argument("model", type=str, help="qGNN Model name")
 args = parser.parse_args()
 
 #device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
@@ -51,15 +56,15 @@ gnn = GNNModel(
 )
 
 dataset = dataset_from_conf(
-    trajectory='./data/March.11.GNN.data.Trialanine/rmsd.dcd',
-    top='./data/March.11.GNN.data.Trialanine/trialanine.parm7',
-    cutoff=20,  # Ang
-    save=True,
-    name_file='./data/bond_cutoff20/biased100ns300k.pt'       
+    trajectory = args.dcd,
+    top = args.top,
+    cutoff = 20,  # Angstrom
+    save = True,
+    name_file = args.graph       
 )
 #dataset = torch.load('./data/bond_cutoff20/biased100ns300k.pt')
 dataset = [data.to(device) for data in dataset]
-label_data = pd.read_csv('./data/March.11.GNN.data.Trialanine/tri-rmsd-2d.csv')
+label_data = pd.read_csv(args.csv)
 labels = [[torch.tensor(value, device=device) for value in sublist] for sublist in label_data[['Ka', 'Kb', 'center', 'weight']].to_numpy().tolist()]
 datasets = create_timelagged_dataset(dataset, labels, lag_time=2, balance=0.7)
 
@@ -72,8 +77,7 @@ datasets = create_timelagged_dataset(dataset, labels, lag_time=2, balance=0.7)
 ##*****************************************************************##
 
 train_data, val_data = train_val_dataset(datasets, train_ratio=0.8)
-
-model_name = f'./trained_models/Trialanine_k{args.k_force:.1f}'
+model_name = args.model
 epochs = args.epochs
 patience = args.patience
 kforce = torch.tensor(args.k_force, device=device)
