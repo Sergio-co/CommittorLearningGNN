@@ -1,1 +1,1 @@
-_Graphical Neural Networks_
+*Graphical Neural Networks*
