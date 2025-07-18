@@ -1,0 +1,126 @@
+colvarsTrajFrequency    100
+colvarsRestartFrequency 5000
+
+
+colvar {
+  name rmsd_eq
+
+  width 0.05
+  lowerBoundary 0.1
+  upperBoundary 1.8
+
+  extendedLagrangian on
+  extendedFluctuation 0.02
+  extendedLangevinDamping 1.0
+  extendedTimeConstant 100
+
+  subtractAppliedForce on
+  outputTotalForce
+
+  rmsd {
+  atoms {
+    name heavy_eq
+    atomNumbers { 1 2 3 5 9 13 14 15 17 19 }
+  }
+  refPositionsFile A.pdb
+
+  }
+}
+
+colvar {
+  name rmsd_ax
+  
+  width 0.05
+  lowerBoundary 0.1
+  upperBoundary 1.8
+
+  extendedLagrangian on
+  extendedFluctuation 0.02
+  extendedLangevinDamping 1.0
+  extendedTimeConstant 100
+
+  subtractAppliedForce on
+  outputTotalForce
+
+  rmsd {
+  atoms { 
+    name heavy_ax
+    atomNumbers { 1 2 3 5 9 13 14 15 17 19 }
+  }
+  refPositionsFile B.pdb
+
+  }
+}
+
+colvar {
+  name phi
+
+  dihedral {
+    #onesiteTotalForce
+    group1 { 
+      atomnumbers 13
+    }
+    group2 { 
+      atomnumbers 15
+    }
+    group3 { 
+      atomnumbers 17
+    }
+    group4 { 
+      atomnumbers 1
+    }
+  }
+}
+
+colvar {
+  name psi
+
+  dihedral {
+    #onesiteTotalForce
+    group1 { 
+      atomnumbers 3
+    }
+    group2 { 
+      atomnumbers 1
+    }
+    group3 { 
+      atomnumbers 17
+    }
+    group4 { 
+      atomnumbers 15
+    }
+  }
+}
+
+harmonicWalls {
+     colvars            rmsd_eq
+     lowerWalls         0.1
+     upperWalls         1.8
+     forceConstant      1.0
+     #bypassExtendedLagrangian off
+}
+
+harmonicWalls {
+     colvars            rmsd_ax
+     lowerWalls         0.1
+     upperWalls         1.8
+     forceConstant      1.0
+     #bypassExtendedLagrangian off
+}
+
+abf {
+  colvars rmsd_eq rmsd_ax
+  scaledBiasingForce on
+  scaledBiasingForceFactorsGrid rmsd.mask.pmf
+  fullSamples	10000
+  writeCZARwindowfile
+}
+
+metadynamics {
+   colvars rmsd_eq rmsd_ax
+   hillWeight 0.1
+   hillWidth 2
+   newHillFrequency 1000
+   wellTempered on
+   biasTemperature 1500
+}
