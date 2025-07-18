@@ -20,3 +20,5 @@ Where:
 - model: string referring to the name you give to the qGNN model.
 
 In ''tools'' folder, the file Graph.py can be used to plot the model into a plane of two selected coordinates or predefined collective variables for visualization purposes.
+
+Additionally, the ''config_NAMD'' folder contains all the configuration files for NAMD program and Colvars module to reproduce the simulated systems.
