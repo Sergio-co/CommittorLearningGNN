@@ -94,7 +94,6 @@ colvar {
 
 harmonicWalls {
      colvars            rmsd_eq
-     lowerWalls         0.1
      upperWalls         1.8
      forceConstant      1.0
      #bypassExtendedLagrangian off
@@ -102,7 +101,6 @@ harmonicWalls {
 
 harmonicWalls {
      colvars            rmsd_ax
-     lowerWalls         0.1
      upperWalls         1.8
      forceConstant      1.0
      #bypassExtendedLagrangian off
