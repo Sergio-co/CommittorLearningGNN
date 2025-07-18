@@ -1,0 +1,147 @@
+colvarsTrajFrequency    100
+colvarsRestartFrequency 10000
+
+colvar {
+	name phi1
+
+  	width 9.0
+
+	dihedral {
+		group1 {
+			atomNumbers 5
+		}
+		group2 {
+			atomNumbers 7
+				}
+		group3 {
+			atomNumbers 9
+				}
+		group4 {
+			atomNumbers 15
+				}
+		
+	}
+}
+
+colvar {
+	name phi2
+
+  	width 9.0
+
+    dihedral {
+		group1 {
+			atomNumbers 15
+		}
+		group2 {
+			atomNumbers 17
+		}
+		group3 {
+			atomNumbers 19
+		}
+		group4 {
+			atomNumbers 25
+		}
+	}
+}
+
+
+colvar {
+	name phi3
+
+  	width 9.0
+
+	dihedral {
+		group1 {
+			atomNumbers 25
+		}
+		group2 {
+			atomNumbers 27
+		}
+		group3 {
+			atomNumbers 29
+		}
+		group4 {
+			atomNumbers 35
+		}
+	}
+}
+
+colvar {
+   
+   name                     RMSD_1
+   width                     0.1
+   lowerBoundary             0.05
+   upperBoundary             5.05
+
+   upperWall                 5.5
+
+   upperWallConstant       100.0   
+   
+   outputAppliedForce         on
+   outputTotalForce           on
+      
+   subtractAppliedForce       on
+   extendedLagrangian         on
+   extendedFluctuation       0.02
+   extendedTimeConstant      100
+    
+   RMSD {
+        forceNoPBC       on
+        atoms {
+            atomNumbers  2 5 7 9 11 15 16 17 19 21 25 26 27 29 31 35 36 37 39   
+        }
+        refPositionsFile ./A.pdb
+    }
+
+}
+
+
+colvar {
+   
+   name                     RMSD_2
+   width                     0.1
+   lowerBoundary             0.05
+   upperBoundary             5.05
+
+   upperWall                 5.5
+
+   upperWallConstant       100.0   
+   
+   outputAppliedForce         on
+   outputTotalForce           on
+      
+   subtractAppliedForce       on
+   extendedLagrangian         on
+   extendedFluctuation       0.02
+   extendedTimeConstant      100
+    
+   RMSD {
+        forceNoPBC       on
+        atoms {
+            atomNumbers  2 5 7 9 11 15 16 17 19 21 25 26 27 29 31 35 36 37 39   
+        }
+        refPositionsFile ./B.pdb
+    }
+
+}
+
+abf {
+    colvars     	RMSD_1 RMSD_2
+    fullSamples           10000
+    writeCZARwindowFile   yes
+    CZARestimator         yes
+    integrate              on
+    historyFreq          10000
+    scaledBiasingForce   on
+    scaledBiasingForceFactorsGrid rmsd.mask.pmf
+}
+
+metadynamics {
+    colvars            RMSD_1 RMSD_2
+    hillWidth             2.0
+    hillWeight            0.1
+    wellTempered           on
+    newHillFrequency     1000    
+    biasTemperature      1500
+}
+
