@@ -18,3 +18,5 @@ Where:
 - csv: csv file in which the time-lagged trajectory is written and the weigths for reweigthing the committor time-correlation function.
 - graph: string referring to the name you give to the file containing all the graphs corresponding to the trajectory images.
 - model: string referring to the name you give to the qGNN model.
+
+In ''tools'' folder, the file Graph.py can be used to plot the model into a plane with two selected coordinates.
