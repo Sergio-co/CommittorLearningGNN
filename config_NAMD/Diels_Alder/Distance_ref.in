@@ -1,0 +1,98 @@
+colvarsTrajFrequency    10
+colvarsRestartFrequency 1000
+
+colvar {
+  name d1
+  
+  width 0.05
+  lowerBoundary 0.1
+  upperBoundary 3.7
+
+  extendedLagrangian on
+  extendedFluctuation 0.01
+  extendedLangevinDamping 1.0
+  extendedTimeConstant 200
+
+  subtractAppliedForce on
+  outputTotalForce
+  distance {
+    group1 {atomnumbers {1}}
+    group2 {atomnumbers {3}}
+  }
+}
+
+colvar {
+  name d2
+
+  width 0.05
+  lowerBoundary 0.1
+  upperBoundary 3.7
+
+  extendedLagrangian on
+  extendedFluctuation 0.01
+  extendedLangevinDamping 1.0
+  extendedTimeConstant 200
+
+  subtractAppliedForce on
+  outputTotalForce
+
+  distance {
+    group1 {atomnumbers {6}}
+    group2 {atomnumbers {9}}
+  }
+}
+
+colvar {
+  name dihed
+
+  dihedral {
+    group1 {atomnumbers {6}}
+    group2 {atomnumbers {3}}
+    group3 {atomnumbers {1}}
+    group4 {atomnumbers {2}}
+  }
+}
+
+harmonicWalls {
+     colvars            d1
+     upperWalls         3.5
+     forceConstant      100.0
+     outputenergy        on
+     #bypassExtendedLagrangian off
+}
+
+harmonicWalls {
+     colvars            d2
+     upperWalls         3.5
+     forceConstant      100.0
+     outputenergy        on
+     #bypassExtendedLagrangian off
+}
+
+harmonicWalls {
+     colvars            dihed
+     lowerWalls         -80
+     upperWalls         80
+     forceConstant      10.0
+     #bypassExtendedLagrangian off
+}
+
+abf {
+  colvars d1 d2
+  fullSamples	5000
+  writeCZARwindowfile
+  historyFreq 10000
+  shared on
+  sharedFreq 100
+}
+
+metadynamics {
+   colvars d1 d2
+   hillWeight 0.1
+   hillWidth 2
+   newHillFrequency 1000
+   wellTempered on
+   biasTemperature 2000
+   writeHillsTrajectory on 
+}
+
