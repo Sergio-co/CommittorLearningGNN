@@ -36,11 +36,13 @@ os.environ["PATH"] += os.pathsep + '/sbin'
 parser = argparse.ArgumentParser(description="Run GNN model with specified parameters.")
 parser.add_argument("k_force", type=float, help="Basin force constant")
 parser.add_argument("gpu", type=str, help="gpu")
+parser.add_argument("font_file", type=str, help="Font file")
+parser.add_argument("pmf", type=str, help="PMF")
+parser.add_argument("qGNN", type=str, help="qGNN model file")
 args = parser.parse_args()
 
 def load_fon():
-    font_path = os.path.join(parent_dir,'/home/scontreras/miniconda3/lib/python3.12/site-packages/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf')
-    #font_path = os.path.join(parent_dir,'/home/sergiocontrerasarredondo/miniconda3/fonts/arial.ttf')
+    font_path = os.path.join(parent_dir,args.font_file)
     assert os.path.exists(font_path)
     font_manager.fontManager.addfont(font_path)
     prop = font_manager.FontProperties(fname=font_path)
@@ -70,10 +72,10 @@ name = f'./Images/all/combo3_w_k{args.k_force:.1f}.jpeg'
 scripted_model = torch.load(f'./trained_models/all/combo3_w_k{args.k_force:.1f}_best_model.ptc', map_location=device)
 #scripted_model.to(device)
 scripted_model.eval()
-pmf = pd.read_csv('./data/QMMM.all.czar.pmf', delimiter=r'\s+', comment='#', header=None)
+pmf = pd.read_csv(args.pmf, delimiter=r'\s+', comment='#', header=None)
 pmf.columns = ['d1', 'd2', 'energy']
 
-dataset = torch.load('./data/all/combo5ns_all.pt')
+dataset = torch.load(args.qGNN)
 dataset = [data.to(device) for data in dataset]
 data = pd.read_csv('./data/DA_RMSD_k1.csv.gz')#, comment='#', sep='\s+', header=None, names=['step','phi','psi'])
 
@@ -212,11 +214,4 @@ def plot_pmf_hexbin(energy_landscape, pmf, save_figure=None):
         plt.savefig(save_figure, dpi=300, bbox_inches='tight', transparent=False)
 
 plot_pmf_hexbin(data, pmf, save_figure=name)
-#plot_pmf_smooth(data, save_figure='smooth.jpeg')
-#plt.hist(data["committor"], bins=100, edgecolor='black')
-#plt.xlabel("Committor")
-#plt.ylabel("Frecuencia")
-#plt.title("Histograma de Frecuencias")
-#plt.savefig('hist.jpeg')
-#plt.show()
 
