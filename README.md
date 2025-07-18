@@ -19,4 +19,4 @@ Where:
 - graph: string referring to the name you give to the file containing all the graphs corresponding to the trajectory images.
 - model: string referring to the name you give to the qGNN model.
 
-In ''tools'' folder, the file Graph.py can be used to plot the model into a plane with two selected coordinates.
+In ''tools'' folder, the file Graph.py can be used to plot the model into a plane of two selected coordinates or predefined collective variables for visualization purposes.
