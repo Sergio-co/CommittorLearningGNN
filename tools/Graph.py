@@ -39,6 +39,11 @@ parser.add_argument("gpu", type=str, help="gpu")
 parser.add_argument("font_file", type=str, help="Font file")
 parser.add_argument("pmf", type=str, help="PMF")
 parser.add_argument("qGNN", type=str, help="qGNN model file")
+parser.add_argument("graphs", type=str, help="Graph file of the trajectory")
+parser.add_argument("csv", type=str, help="csv file of the trajectory")
+parser.add_argument("cv_x", type=str, help="Name of 1st CV for projection")
+parser.add_argument("cv_y", type=str, help="Name of 2nd CV for projection")
+parser.add_argument("fig_name", type=str, help="Name of the image you want to save")
 args = parser.parse_args()
 
 def load_fon():
@@ -66,18 +71,17 @@ plt.rcParams.update({
     "pgf.preamble": '\n'.join(["\\usepackage{units}"])
 })
 
-#device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+
 device = torch.device(args.gpu)
-name = f'./Images/all/combo3_w_k{args.k_force:.1f}.jpeg'
-scripted_model = torch.load(f'./trained_models/all/combo3_w_k{args.k_force:.1f}_best_model.ptc', map_location=device)
-#scripted_model.to(device)
+name = args.fig_name
+scripted_model = torch.load(args.qGNN, map_location=device)
 scripted_model.eval()
 pmf = pd.read_csv(args.pmf, delimiter=r'\s+', comment='#', header=None)
-pmf.columns = ['d1', 'd2', 'energy']
+pmf.columns = [args.cv_x, args.cv_y, 'energy']
 
-dataset = torch.load(args.qGNN)
+dataset = torch.load(args.graphs)
 dataset = [data.to(device) for data in dataset]
-data = pd.read_csv('./data/DA_RMSD_k1.csv.gz')#, comment='#', sep='\s+', header=None, names=['step','phi','psi'])
+data = pd.read_csv(args.csv)#, comment='#', sep='\s+', header=None, names=['step','phi','psi'])
 
 if len(dataset) < len(data):
     data = data.head(len(dataset))
@@ -101,7 +105,7 @@ outputs = torch.cat(outputs)
 #outputs = (outputs - outputs.min())/(outputs.max()-outputs.min())
 #outputs = outputs[:len(data)]
 data['committor'] = outputs.squeeze().numpy()
-data = data[['committor','d1','d2']]
+data = data[['committor',args.cv_x,args.cv_y]]
 #data = data.sample(n=50000)
 #data.to_csv('committor_values.csv', index=False)
 
@@ -113,8 +117,8 @@ def plot_pmf(energy_landscape, pmf, save_figure=None):
     #w, h = figaspect(1/1.3)
     #fig = plt.figure(figsize=(w, h), constrained_layout=True)
 
-    x = pmf['d1'].to_numpy()
-    y = pmf['d2'].to_numpy()
+    x = pmf[args.cv_x].to_numpy()
+    y = pmf[args.cv_y].to_numpy()
     z = pmf['energy'].to_numpy()
 
     binx = len(set(x))
@@ -123,8 +127,8 @@ def plot_pmf(energy_landscape, pmf, save_figure=None):
     y = y.reshape(binx, biny)
     energy = z.reshape(binx, biny)
 
-    xi = energy_landscape['d1'].to_numpy()
-    yi = energy_landscape['d2'].to_numpy()
+    xi = energy_landscape[args.cv_x].to_numpy()
+    yi = energy_landscape[args.cv_y].to_numpy()
     zi = energy_landscape['committor'].to_numpy()
    
     mask = (zi >= 0.49) & (zi <= 0.51)
@@ -146,8 +150,8 @@ def plot_pmf(energy_landscape, pmf, save_figure=None):
     #ax.set_facecolor('lightgrey')
     ax.set_xlim(1.19, 3.5)
     ax.set_ylim(1.19, 3.5)
-    ax.set_xlabel(r'$d1$ ($\AA$)',fontsize = 24)
-    ax.set_ylabel(r'$d2$ ($\AA$)',fontsize = 24)
+    ax.set_xlabel(args.cv_x,fontsize = 24)
+    ax.set_ylabel(args.cv_y,fontsize = 24)
 
     ax.tick_params(direction='in', which='major', length=6.0, width=1.0, top=True, right=True)
     ax.tick_params(direction='in', which='minor', length=3.0, width=1.0, top=True, right=True)
@@ -170,8 +174,8 @@ def plot_pmf_hexbin(energy_landscape, pmf, save_figure=None):
     colormap.set_over(color='lightgrey')
     colormap.set_under(color='lightgrey')
 
-    x = pmf['d1'].to_numpy()
-    y = pmf['d2'].to_numpy()
+    x = pmf[args.cv_x].to_numpy()
+    y = pmf[args.cv_y].to_numpy()
     z = pmf['energy'].to_numpy()
 
     binx = len(set(x))
@@ -180,8 +184,8 @@ def plot_pmf_hexbin(energy_landscape, pmf, save_figure=None):
     y = y.reshape(binx, biny)
     energy = z.reshape(binx, biny)
 
-    xi = energy_landscape['d1'].to_numpy()
-    yi = energy_landscape['d2'].to_numpy()
+    xi = energy_landscape[args.cv_x].to_numpy()
+    yi = energy_landscape[args.cv_y].to_numpy()
     zi = energy_landscape['committor'].to_numpy()
 
     mask = (zi >= 0.49) & (zi <= 0.51)
@@ -203,8 +207,8 @@ def plot_pmf_hexbin(energy_landscape, pmf, save_figure=None):
     ax.set_xlim(1.19, 3.5)
     ax.set_ylim(1.19, 3.5)
 
-    ax.set_xlabel(r'$d1$ ($\AA$)', fontsize=24)
-    ax.set_ylabel(r'$d2$ ($\AA$)', fontsize=24)
+    ax.set_xlabel(args.cv_x, fontsize=24)
+    ax.set_ylabel(args.cv_y, fontsize=24)
     ax.set_aspect('equal', adjustable='box')
 
     clb = plt.colorbar(hb, ticks=np.linspace(0, 1, 6))
