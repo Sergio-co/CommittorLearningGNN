@@ -75,7 +75,7 @@ colvar {
 
    upperWall                 5.5
 
-   upperWallConstant       100.0   
+   upperWallConstant         1.0   
    
    outputAppliedForce         on
    outputTotalForce           on
@@ -105,7 +105,7 @@ colvar {
 
    upperWall                 5.5
 
-   upperWallConstant       100.0   
+   upperWallConstant         1.0   
    
    outputAppliedForce         on
    outputTotalForce           on
