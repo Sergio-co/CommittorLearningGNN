@@ -2,6 +2,17 @@
 
 In this repository you can find the code associated with the committor-graph neural network (qGNN) presented in the article ''Atomic-level committor learning without collective variables,'' Sergio Contreras Arredondo _et al._ (2025). As well, we present the neccessary files for simulation reproducibility using [NAMD](https://www.ks.uiuc.edu/Research/namd/) molecular simulation package and together with [Colvars](https://github.com/Colvars/colvars) module for the enhance sampling.
 
+- **Operating System**: Linux (Ubuntu 22.04), macOS (13.0), Windows 11  
+- **Programming Language**: Python 3.10+  
+- **Dependencies**:  
+  - PyTorch (>= 2.1)  
+  - PyTorch Geometric (>= 2.5)  
+  - NumPy (>= 1.24)
+ 
+- **Hardware requirements**:
+  - Normal usage: standard desktop/laptop with CPU (≥ 16 GB RAM)  
+  - Training: GPU (NVIDIA RTX 3080 or better recommended, 60 GB RAM) 
+
 ## Running the model
 
 To run the model:
