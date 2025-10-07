@@ -12,12 +12,12 @@ from scipy.spatial import distance_matrix
 from torch_geometric.utils import to_undirected
 from tqdm import tqdm
 
-def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt'):
+def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt', device='cpu'):
     u = mda.Universe(top, trajectory)
     graphs = []
     for ts in tqdm(u.trajectory, desc="Processing trajectory"):
         graph = Get_Graph(u.atoms, cutoff)
-        graphs.append(graph)
+        graphs.append(graph.to(device))
     if save:    
         torch.save(graphs, name_file)
 
@@ -25,8 +25,8 @@ def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt'
 
 
 def Get_Graph(frame, cutoff):
-    #selected_atoms = frame.select_atoms("not name H*").indices
-    selected_atoms = frame.select_atoms("all").indices
+    selected_atoms = frame.select_atoms("not name H*").indices
+    #selected_atoms = frame.select_atoms("all").indices
 
     coords = frame.positions[selected_atoms]
     com = np.mean(coords, axis=0)
@@ -47,7 +47,7 @@ def Get_Graph(frame, cutoff):
 
     for local_i, i in enumerate(selected_atoms):
         for local_j, j in enumerate(selected_atoms):
-            if local_i < local_j and dist_matrix[local_i, local_j] <= cutoff and (i, j) in bonded_pairs:
+            if local_i < local_j and dist_matrix[local_i, local_j] <= cutoff: #and (i, j) in bonded_pairs:
                 edge_index.append([local_i, local_j])
                 edge_index.append([local_j, local_i])
                 
@@ -117,7 +117,7 @@ def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
 
     label0 = dataset1[:-lag]
     label1 = dataset1[lag:]
-    weights = torch.sqrt(torch.tensor([row0[3] * row1[3] for row0, row1 in zip(label0, label1)], device=label0[0][0].device))
+    weights = torch.sqrt(torch.abs(torch.tensor([row0[3] * row1[3] for row0, row1 in zip(label0, label1)], device=label0[0][0].device)))
     labels = [a + b + [c] for a, b, c in zip(label0, label1, weights)]
 
     data0 = dataset[:-lag]
@@ -142,8 +142,7 @@ def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
         random.shuffle(balanced_dataset)
         tupla = balanced_dataset
     
-    torch.save(tupla[:100000], './full_balanced/Full_combo5ns_heavy.pt')
-    #torch.save(tupla[:1000000], './data/bond_cutoff20/Fullb_biased50ns300k.pt')
+    torch.save(tupla, 'Full_dataset.pt')
     
     return tupla
     
