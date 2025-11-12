@@ -12,103 +12,117 @@ from scipy.spatial import distance_matrix
 from torch_geometric.utils import to_undirected
 from tqdm import tqdm
 
-def dataset_from_conf(trajectory, top, cutoff, save=True, name_file='dataset.pt', device='cpu'):
+def dataset_from_conf(trajectory, top, cutoff, use_bonded_only=False,
+                      save=True, name_file='dataset.pt', device='cpu'):
+    """
+    Build a graph dataset from MD trajectory
+
+    Args:
+        trajectory (str): Trajectory file (e.g. .xtc, .dcd, etc.)
+        top (str): Topology file (e.g. .pdb, .psf, .prmtop, etc.)
+        cutoff (float): Cutoff for edges (Å).
+        use_bonded_only (bool): if True, edges only between bonded atoms.
+        save (bool): if True, save dataset to the disk.
+        name_file (str): name of the dataset to save.
+        device (str): 'cpu' or 'cuda' (GPU).
+
+    Returns:
+        list[torch_geometric.data.Data]: list of graphs.
+    """
     u = mda.Universe(top, trajectory)
     graphs = []
+    
+    selected_atoms = u.atoms.select_atoms("not name H*").indices
+    bonded_pairs = set(tuple(sorted((b.indices[0], b.indices[1]))) for b in u.bonds)
+    bonded_pairs = {(i, j) for i, j in bonded_pairs if i in selected_atoms and j in selected_atoms}
+        
     for ts in tqdm(u.trajectory, desc="Processing trajectory"):
-        graph = Get_Graph(u.atoms, cutoff)
-        graphs.append(graph.to(device))
-    if save:    
+        graph = Get_Graph(u.atoms, cutoff=cutoff,
+                          use_bonded_only=use_bonded_only,
+                          device=device,
+                          selected_atoms=selected_atoms,
+                          bonded_pairs=bonded_pairs)
+        graphs.append(graph)
+
+    if save:
         torch.save(graphs, name_file)
 
     return graphs
 
+def Get_Graph(frame, cutoff=5.0, use_bonded_only=False, device='cpu', selected_atoms=None, bonded_pairs=None):
+    """
+    Build a graph from a single frame of the trajectory.
 
-def Get_Graph(frame, cutoff):
-    selected_atoms = frame.select_atoms("not name H*").indices
-    #selected_atoms = frame.select_atoms("all").indices
+    Args:
+        frame: frame of MDAnalysis.
+        cutoff (float): Max distance for edges (Å).
+        use_bonded_only (bool): if True, edges only between bonded atoms.
+        device (str): 'cpu' o 'cuda'.
+    """
 
-    coords = frame.positions[selected_atoms]
-    com = np.mean(coords, axis=0)
+    #selected_atoms = frame.select_atoms("not name H*").indices
+    coords_np = frame.positions[selected_atoms]
 
-    #***Node features***#
-    node_s = np.linalg.norm(coords - com, axis=1, keepdims=True)
+    # --- coordinates to tensors ---
+    coords = torch.as_tensor(coords_np, dtype=torch.float32, device=device)
+    coords.requires_grad_(True)
+    com = torch.mean(coords, dim=0, keepdim=True)
+
+    # --- Node features ---
+    node_s = torch.norm(coords - com, dim=1, keepdim=True)
     node_v = coords - com
-    dist_matrix = distance_matrix(coords, coords)
-
-    #***Edge features***#
-    edge_index = []
-    edge_attr = []
-    edge_vectors = []
-
     num_atoms = len(selected_atoms)
-    bonded_pairs = set(tuple(sorted((bond.indices[0], bond.indices[1]))) for bond in frame.bonds)
-    bonded_pairs = {(i, j) for i, j in bonded_pairs if i in selected_atoms and j in selected_atoms}
 
-    for local_i, i in enumerate(selected_atoms):
-        for local_j, j in enumerate(selected_atoms):
-            if local_i < local_j and dist_matrix[local_i, local_j] <= cutoff: #and (i, j) in bonded_pairs:
-                edge_index.append([local_i, local_j])
-                edge_index.append([local_j, local_i])
-                
-                distance = dist_matrix[local_i, local_j]
-                edge_attr.append([distance])
-                edge_attr.append([distance])
-                
-                direction = (coords[local_j] - coords[local_i]) / distance
-                edge_vectors.append(direction)
-                edge_vectors.append(-direction)
+    # --- edges ---
+    if not use_bonded_only:
+        #  cutoff
+        dist_matrix = torch.cdist(coords, coords, p=2)
+        mask = (dist_matrix <= cutoff) & (torch.triu(torch.ones_like(dist_matrix), diagonal=1).bool())
+        i_idx, j_idx = torch.where(mask)
 
-    edge_index = torch.tensor(edge_index, dtype=torch.long).T if edge_index else torch.empty((2, 0), dtype=torch.long)
-    edge_attr = torch.tensor(np.array(edge_attr), dtype=torch.float) if edge_attr else torch.empty((0, 1), dtype=torch.float)
-    edge_vectors = torch.tensor(np.array(edge_vectors), dtype=torch.float) if edge_vectors else torch.empty((0, 3), dtype=torch.float)
+    else:
+        global_to_local = {a: idx for idx, a in enumerate(selected_atoms)}
+        pairs_local = torch.tensor(
+            [[global_to_local[i], global_to_local[j]] for i, j in bonded_pairs],
+            dtype=torch.long,
+            device=device
+        )
 
-    node_s = torch.tensor(node_s, dtype=torch.float)
-    node_v = torch.tensor(node_v, dtype=torch.float)
-    
-    
-    #++++++++++Uncomment if you want angles and dihedrals in the graphs+++++++++#
-    #****** Angles and Dihedrals ******#
-    '''
-    angles = []
-    dihedrals = []
+        if pairs_local.numel() > 0:
+            i_idx, j_idx = pairs_local[:, 0], pairs_local[:, 1]
+            diff = coords[j_idx] - coords[i_idx]
+            dist = torch.norm(diff, dim=1)
+            mask = dist <= cutoff
+            i_idx, j_idx = i_idx[mask], j_idx[mask]
+        else:
+            i_idx = j_idx = torch.empty(0, dtype=torch.long, device=device)
 
-    for angle in frame.angles:
-        i, j, k = angle.indices
-        vec1 = coords[i] - coords[j]
-        vec2 = coords[k] - coords[j]
-        cos_theta = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-        theta = np.arccos(np.clip(cos_theta, -1.0, 1.0))
-        angles.append(theta)
-    
-    for dihedral in frame.dihedrals:
-        i, j, k, l = dihedral.indices
-        vec1 = coords[i] - coords[j]
-        vec2 = coords[k] - coords[j]
-        vec3 = coords[l] - coords[k]
-        n1 = np.cross(vec1, vec2)
-        n2 = np.cross(vec2, vec3)
-        m1 = np.cross(n1, vec2)
-        
-        x = np.dot(n1, n2)
-        y = np.dot(m1, n2) * np.linalg.norm(vec2)
-        phi = np.arctan2(y, x)
-        dihedrals.append(phi)'''
 
-    #******Crate the graph******#
+    if len(i_idx) > 0:
+        diff = coords[j_idx] - coords[i_idx]
+        dist = torch.norm(diff, dim=1)
+        directions = diff / dist.unsqueeze(1)
+
+        edge_index = torch.cat([torch.stack([i_idx, j_idx]), torch.stack([j_idx, i_idx])], dim=1)
+        edge_attr = torch.cat([dist, dist]).unsqueeze(1)
+        edge_vectors = torch.cat([directions, -directions], dim=0)
+    else:
+        edge_index = torch.empty((2, 0), dtype=torch.long, device=device)
+        edge_attr = torch.empty((0, 1), dtype=torch.float, device=device)
+        edge_vectors = torch.empty((0, 3), dtype=torch.float, device=device)
+
+    # --- Create graph ---
     graph = Data(
         node_s=node_s,
         node_v=node_v,
         edge_index=edge_index,
         edge_attr=edge_attr,
         edge_v=edge_vectors,
-        #angles=torch.tensor(angles, dtype=torch.float),
-        #dihedrals=torch.tensor(dihedrals, dtype=torch.float)
     )
 
     return graph
 
-def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
+def create_timelagged_dataset(name, dataset, dataset1, lag_time=2, balance=None):
     lag = int(lag_time)
 
     # balance --> points outside basins / total points
@@ -141,8 +155,9 @@ def create_timelagged_dataset(dataset, dataset1, lag_time=2, balance=None):
         balanced_dataset = positive_samples + negative_samples
         random.shuffle(balanced_dataset)
         tupla = balanced_dataset
-    
-    torch.save(tupla, 'Full_dataset.pt')
+
+    random.shuffle(tupla)
+    torch.save(tupla[:100000], name)
     
     return tupla
     
