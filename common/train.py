@@ -4,10 +4,10 @@ import torch
 from datetime import datetime
 import numpy as np
 from copy import deepcopy
-
+import time
 
 #@torch.compile
-def train_one_epoch(epoch_index, train_loader, model_to_train, optimizer, loss_function, kforce=1.0):
+def train_one_epoch(epoch_index, train_loader, model_to_train, optimizer, loss_function, kforce=1.0, l1_lambda=None):
     report_step = max(1, len(train_loader) // 5)
     print(f'EPOCH {epoch_index + 1} ({len(train_loader)} batches):')
 
@@ -19,6 +19,13 @@ def train_one_epoch(epoch_index, train_loader, model_to_train, optimizer, loss_f
         optimizer.zero_grad(set_to_none=True)
 
         loss, q0, ls, qt, qa = loss_function(model_to_train, data_t0, data_t1, labels, kforce)
+        
+        # --- L1 regularization ---
+        if l1_lambda:
+            l1_norm = sum(p.abs().sum() for p in model_to_train.parameters())
+            loss = loss + l1_lambda * l1_norm
+        # --------------------------
+        
         loss.backward()
         optimizer.step()
 
@@ -50,7 +57,7 @@ def val_one_epoch(epoch_index, val_loader, model_to_train, loss_function, kforce
     return avg_loss
 
 def train_model(model_to_train, output_prefix, train_set, val_set, loss_function,
-                epochs=1000, patience=20, batch_size=500, batch_size_factor=0.6, old_checkpoint=None, dataloader=None, lr=1e-4, kforce=1.0, wd=1e-5):
+                epochs=1000, patience=20, batch_size=500, batch_size_factor=0.6, old_checkpoint=None, dataloader=None, lr=1e-4, kforce=1.0, wd=1e-5, wd1=1e-5):
     if dataloader is None:
         raise RuntimeError('Please provide a valid dataloader')
     # compute an appropriate batch size
@@ -58,9 +65,9 @@ def train_model(model_to_train, output_prefix, train_set, val_set, loss_function
 
     print(f'Batch size: {batch_size}')
     train_loader = dataloader(train_set, batch_size=batch_size, shuffle=True)
-    val_loader = dataloader(val_set, batch_size=int(len(val_set)/100), shuffle=False)
+    val_loader = dataloader(val_set, batch_size=int(len(val_set)/200), shuffle=False)
     optimizer = torch.optim.Adam(model_to_train.parameters(), lr=lr, weight_decay=wd)
-    
+    curve = []    
     #timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     if old_checkpoint is None:
         epoch_number = 0
@@ -69,11 +76,15 @@ def train_model(model_to_train, output_prefix, train_set, val_set, loss_function
         best_vloss = float('inf')
 
     model_name = f'{output_prefix}_best_model.ptc'
+    loss_name = f'{output_prefix}_loss.txt'
     while epoch_number < epochs:
-        avg_loss = train_one_epoch(epoch_number, train_loader, model_to_train, optimizer, loss_function, kforce)
+        start = time.time()
+        avg_loss = train_one_epoch(epoch_number, train_loader, model_to_train, optimizer, loss_function, kforce, l1_lambda=wd1)
         avg_vloss = val_one_epoch(epoch_number, val_loader, model_to_train, loss_function, kforce)
+        end = time.time()
+        epoch_time = end - start  # seconds
         print('LOSS train {} valid {}'.format(avg_loss, avg_vloss))
-
+        curve.append([epoch_number,avg_loss,avg_vloss,epoch_time])
         if avg_vloss < best_vloss:
             best_epoch_number = epoch_number
             best_vloss = avg_vloss
@@ -94,4 +105,5 @@ def train_model(model_to_train, output_prefix, train_set, val_set, loss_function
         #    best_epochs, best_model_state_dict, best_vloss, checkpoint_filename)
         epoch_number += 1
     #model_to_train.load_state_dict(best_model_state_dict)
+        np.savetxt(loss_name, np.array(curve), fmt="%.6f")
     return model_to_train
