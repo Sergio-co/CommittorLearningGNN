@@ -52,11 +52,9 @@ dataset = dataset_from_conf(
 torch.save(dataset[:100000], './data/chunk_20ms.pt')
 
 #####***** If you already have the graph dataset and want to create the time-lag dataset, uncomment next line *****#####
-#dataset = torch.load('./data/heavy/bonds/villin_all.pt', map_location=device)
+#dataset = torch.load('./data/graphs.pt', map_location=device)
 
 
 label_data = pd.read_csv(args.csv_file)
-label_data['Ka'] = args.k_force * label_data['Ka']
-label_data['Kb'] = args.k_force * label_data['Kb']
 labels = [[torch.tensor(value, device=device) for value in sublist] for sublist in label_data[['Ka', 'Kb', 'center', 'weight']].to_numpy().tolist()]
 datasets = create_timelagged_dataset(args.name_timelag, dataset, labels, lag_time=2, balance=0.75)
