@@ -31,17 +31,19 @@ parser = argparse.ArgumentParser(description="Run GNN model with specified param
 parser.add_argument("epochs", type=int, help="Number of epochs")
 parser.add_argument("patience", type=int, help="Patience")
 parser.add_argument("k_force", type=float, help="Basin force constant")
+parser.add_argument("name", type=str, help="Name for the trained model")
+parser.add_argument("dataset", type=str, help="time-lag dataset")
 parser.add_argument("gpu", type=str, help="gpu")
-parser.add_argument("dcd", type=str, help="DCD file name")
-parser.add_argument("top", type=str, help="Topology file name")
-parser.add_argument("csv", type=str, help="Trajectory csv file name")
-parser.add_argument("graph", type=str, help="Graph dataset name")
-parser.add_argument("model", type=str, help="qGNN Model name")
 args = parser.parse_args()
-
-#device = torch.device("cuda:2" if torch.cuda.is_available() else "cpu")
 device = torch.device(args.gpu)
 torch.cuda.empty_cache()
+
+
+##********** This is to read the full graph dataset if you have it ready **************###
+datasets = torch.load(args.dataset, map_location=device)
+##***********************************************************************************##
+
+
 gnn = GNNModel(
     gnn_out = 1,
     node_s_dim = 16,
@@ -55,40 +57,24 @@ gnn = GNNModel(
     activation = 'Tanh',
 )
 
-dataset = dataset_from_conf(
-    trajectory = args.dcd,
-    top = args.top,
-    cutoff = 20,  # Angstrom
-    save = True,
-    name_file = args.graph,
-    device = device
-)
-#dataset = torch.load('./data/bond_cutoff20/biased100ns300k.pt', map_location=device)
-label_data = pd.read_csv(args.csv)
-labels = [[torch.tensor(value, device=device) for value in sublist] for sublist in label_data[['Ka', 'Kb', 'center', 'weight']].to_numpy().tolist()]
-datasets = create_timelagged_dataset(dataset, labels, lag_time=2, balance=0.7)
-
-##*** This is to read the Full_* dataset if you have it ready ***###
-#datasets = torch.load('./data/all/Full_lcombo_all.pt', map_location=device)
-##*****************************************************************##
-
 train_data, val_data = train_val_dataset(datasets, train_ratio=0.8)
-model_name = args.model
+
+model_name = f'./trained_models/{args.name}_k{args.k_force:.1f}'
 epochs = args.epochs
 patience = args.patience
-kforce = torch.tensor(args.k_force, device=device)
-batch_size = 5000
+batch_size = 700
 lr = 1e-4
-weight_decay = 1e-5
+k = torch.tensor(args.k_force, device=device)
+l2_lambda = 1e-5   #Regularization L2
+l1_lambda = 1e-5   #Regularization L1
 
-#/**** This is good for ReLU ****/
+
 def init_weights1(m):
     if isinstance(m, nn.Linear):
         torch.nn.init.kaiming_normal_(m.weight)
         if m.bias is not None:
             torch.nn.init.zeros_(m.bias)
-            
-#/**** This is good for Tanh ****/
+
 def init_weights(m):
     if isinstance(m, torch.nn.Linear):
         torch.nn.init.xavier_uniform_(m.weight)
@@ -101,6 +87,5 @@ gnn.apply(init_weights)
 best_model = train_model(
     model_to_train=gnn, output_prefix=model_name,
     train_set=train_data, val_set=val_data, loss_function=loss, epochs=epochs,
-    patience=patience, batch_size=batch_size, dataloader=DataLoader, lr=lr, kforce=kforce, wd=weight_decay)
+    patience=patience, batch_size=batch_size, dataloader=DataLoader, lr=lr, kforce=k, wd=l2_lambda, wd1=l1_lambda)
     
-
