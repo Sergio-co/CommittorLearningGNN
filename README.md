@@ -8,7 +8,8 @@ In this repository you can find the code associated with the committor-graph neu
 
 - **Operating System**: Linux (Ubuntu 22.04), macOS (13.0), Windows 11  
 - **Programming Language**: Python 3.10+  
-- **Dependencies**:  
+- **Dependencies**:
+  - GVP (https://github.com/drorlab/gvp-pytorch.git)  
   - PyTorch (>= 2.1)  
   - PyTorch Geometric (>= 2.5)  
   - NumPy (>= 1.24)  
