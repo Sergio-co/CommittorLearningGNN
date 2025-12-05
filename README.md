@@ -48,7 +48,7 @@ Where:
 
 **To run the model**:
 ```
-python run.py epochs patience k_force gpu dcd top csv graph model
+python run.py epochs patience k_force model_name dataset_timelag_name gpu
 ```
 Where:
 - epochs: integer referring to the number of epochs for the training.
