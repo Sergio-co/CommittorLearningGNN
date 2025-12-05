@@ -32,6 +32,20 @@ In this repository you can find the code associated with the committor-graph neu
 
 ## 3. Demo (Running the model)
 
+**To create the time-lag dataset**:
+```
+python Create_dataset.py dcd top csv dataset_name dataset_timelag_name cutoff gpu
+```
+Where:
+- dcd: dcd file for the trajectory.
+- top: topology file for the molecule.
+- csv: csv file in which the trajectory is written, containing the weigths for reweigthing the committor time-correlation function and the definition of the basins.
+- dataset_name: name for the graph dataset
+- dataset_timelag_name: name for the time-lag graph dataset
+- cutoff: cutoff for neighbors in the graph
+- gpu: string parameter. If there is cuda, write "cuda:N" with N a number; if not "cpu".
+
+
 **To run the model**:
 ```
 python run.py epochs patience k_force gpu dcd top csv graph model
@@ -40,12 +54,9 @@ Where:
 - epochs: integer referring to the number of epochs for the training.
 - patience: integer referring to the number of epochs to stop if there is no improvement in the loss.
 - k_force: float referring to the k constant of the loss function that gives importance to the boundary conditions.
+- model_name: string referring to the name you give to the qGNN model.
+- dataset_timelag_name: name of the time-lag graph dataset used for the training
 - gpu: string parameter. If there is cuda, write "cuda:N" with N a number; if not "cpu".
-- dcd: dcd file for the trajectory.
-- top: topology file for the molecule.
-- csv: csv file in which the time-lagged trajectory is written and the weigths for reweigthing the committor time-correlation function.
-- graph: string referring to the name you give to the file containing all the graphs corresponding to the trajectory images.
-- model: string referring to the name you give to the qGNN model.
 
 In ''tools'' folder, the file Graph.py can be used to plot the model into a plane of two selected coordinates or predefined collective variables for visualization purposes.
 
